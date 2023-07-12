@@ -51,8 +51,12 @@ async Task<StringBuilder> ReadContentFromS3(string bucketName, string keyName, S
     }
     catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
-        // create new File
-        throw;
+         using (var client = new AmazonS3Client(RegionEndpoint.USWest2))
+            {
+                var fileTransferUtility = new TransferUtility(client);
+        
+                await fileTransferUtility.UploadAsync("filePath", bucketName, keyName);
+            }
     }
     catch (Exception ex)
     {
