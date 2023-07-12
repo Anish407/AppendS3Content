@@ -145,8 +145,13 @@ async Task AppendContentToS3File(string bucketName, string keyName, string conte
     }
     catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
     {
-        // create new File
-        throw;
+         // create new File
+           using (var client = new AmazonS3Client(RegionEndpoint.USWest2))
+            {
+                var fileTransferUtility = new TransferUtility(client);
+
+                await fileTransferUtility.UploadAsync("filePath", bucketName, keyName);
+            }
     }
     catch (Exception ex)
     {
