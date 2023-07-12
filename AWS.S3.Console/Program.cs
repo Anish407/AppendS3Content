@@ -101,39 +101,51 @@ static async Task WriteToS3(string bucketName, string keyName, StringBuilder sb)
 
 async Task AppendContentToS3File(string bucketName, string keyName, string content)
 {
-    using (var client = new AmazonS3Client(RegionEndpoint.USWest2))
+    try
     {
-        // Step 1: Download the existing file from S3
-        var request = new GetObjectRequest
+        using (var client = new AmazonS3Client(RegionEndpoint.USWest2))
         {
-            BucketName = bucketName,
-            Key = keyName
-        };
-
-        using (var response = await client.GetObjectAsync(request))
-        using (var existingContentStream = response.ResponseStream)
-        {
-            // Step 2: Append the new content to the downloaded file
-            using (var memoryStream = new MemoryStream())
+            // Step 1: Download the existing file from S3
+            var request = new GetObjectRequest
             {
-                await existingContentStream.CopyToAsync(memoryStream);
+                BucketName = bucketName,
+                Key = keyName
+            };
 
-                using (var writer = new StreamWriter(memoryStream))
+            using (var response = await client.GetObjectAsync(request))
+            using (var existingContentStream = response.ResponseStream)
+            {
+                // Step 2: Append the new content to the downloaded file
+                using (var memoryStream = new MemoryStream())
                 {
-                    writer.Write(content);
-                    writer.Flush();
+                    await existingContentStream.CopyToAsync(memoryStream);
 
-                    // Step 3: Upload the modified file back to S3
-                    var uploadRequest = new PutObjectRequest
+                    using (var writer = new StreamWriter(memoryStream))
                     {
-                        BucketName = bucketName,
-                        Key = keyName,
-                        InputStream = memoryStream
-                    };
+                        writer.Write(content);
+                        writer.Flush();
 
-                    await client.PutObjectAsync(uploadRequest);
+                        // Step 3: Upload the modified file back to S3
+                        var uploadRequest = new PutObjectRequest
+                        {
+                            BucketName = bucketName,
+                            Key = keyName,
+                            InputStream = memoryStream
+                        };
+
+                        await client.PutObjectAsync(uploadRequest);
+                    }
                 }
             }
         }
+    }
+    catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+        // create new File
+        throw;
+    }
+    catch (Exception ex)
+    {
+        throw;
     }
 }
